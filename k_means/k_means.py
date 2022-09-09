@@ -6,10 +6,10 @@ import pandas as pd
 
 class KMeans:
     
-    def __init__(self, cluster, dim=1, eps=0.001):
+    def __init__(self, cluster, dim=1, scale=1):
         self.cluster = cluster
         self.dim = dim
-        self.eps = eps
+        self.scale = scale
         
     def fit(self, X):
         """
@@ -25,13 +25,6 @@ class KMeans:
         rng = np.random.default_rng()
         for c in range (0,self.cluster):
             centroids[c] = rng.random([n])
-       
-        #next step: add clusters point at each iteration
-        if self.dim==2:
-            X=self.build_scale(X)
-            centroids[0]=[np.amax(X[:,0]),np.amax(X[:,1])]
-            centroids[1]=[np.amin(X[:,0]),np.amin(X[:,1])]
-
         self.centroids = centroids
     
     def predict(self, X):
@@ -50,15 +43,14 @@ class KMeans:
             there are 3 clusters, then a possible assignment
             could be: array([2, 0, 0, 1, 2, 1, 1, 0, 2, 2])
         """
-        if self.dim == 2:
-            X=self.build_scale(X)
-
+        
+        X=self.build_scale(X)
         m,n=X.shape
-        z=np.empty(m)
+        z=np.zeros(m)
         distor, distor_prev = 100, 0
         old_centroids=[]
 
-        while (distor > self.eps and distor_prev != distor):
+        while (distor > 0.001 and distor_prev != distor):
             distor_prev = distor
             distor = euclidean_distortion(X,z.astype(int))
 
@@ -67,13 +59,8 @@ class KMeans:
 
                 for j in range (0,self.cluster):
                     dist_eucl[j]=euclidean_distance(X[i,:],self.centroids[j])
-                # dist_eucl = euclidean_distance(X[i,:],self.centroids)
-                # dist_eucl = cross_euclidean_distance(X[i,:],self.centroids)
 
                 z[i] = np.argmin(dist_eucl)
-
-                # check that width of cluster is less than medium width
-                # eucl_dist ( farest points ) / number of clusters ~ medium width 
 
             for j in range (0,self.cluster):
                 sum_coord =np.empty(n)
@@ -112,17 +99,7 @@ class KMeans:
             [xm_1, xm_2, ..., xm_n]
         ])
         """
-        if self.dim == 1:
-            return self.centroids
-        elif self.dim == 2:
-            c = self.centroids
-            return np.hstack((np.expand_dims(c[:,0].copy(),axis=1),np.expand_dims(c[:,1]/10, axis=1)))
-
-    def get_list_centroids(self):
-        return self.list_centroid
-
-    def get_list_z(self):
-        return self.list_z
+        return np.hstack((np.expand_dims(self.centroids[:,0],axis=1),np.expand_dims(self.centroids[:,1]/self.scale, axis=1)))
 
     def build_scale(self,X):
         """
@@ -134,39 +111,15 @@ class KMeans:
                 m rows (#samples) and n columns (#features)
             
         Returns:
-            new_x (array<m,n+1>): a matrix of floats with 
+            new_x (array<m,n>): a matrix of floats with 
                 m rows (#samples) and n columns (#features)
         """
         assert X.shape[1]>1
-        return np.hstack((np.expand_dims(X[:,0].copy(),axis=1),np.expand_dims(X[:,1]*10, axis=1)))
+        return np.hstack((np.expand_dims(X[:,0].copy(),axis=1),np.expand_dims(X[:,1]*self.scale, axis=1)))
 
     
     
 # --- Some utility functions 
-
-def argmin(x,mu,c):
-    """
-    NOT USED - Finds the closest cluster centroid for the training example x
-        using the Enclidian distance between two set of points
-    
-    Args:
-        x (array<n>): n-length vector with datapoints 
-        mu (array<n>): n-length vector of a cluster's centroid
-        c (integer): integer of number of clusters
-    
-    Returns:
-        An integer with the closest cluster centroid
-    """
-    min=euclidean_distance(x,mu[0])
-    cent=0
-    for j in range (0,c):
-        arg=euclidean_distance(x,mu[j])
-        # TODO: why is it the same euclidian distance btw different xi values with same mu[j] ? 
-        if arg<min:
-            min=arg
-            cent=j
-    return cent
-
 
 def euclidean_distortion(X, z):
     """
