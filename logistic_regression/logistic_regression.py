@@ -10,8 +10,6 @@ class LogisticRegression:
 
 
     def __init__(self, alpha, dim):
-        # NOTE: Feel free add any hyperparameters 
-        # (with defaults) as you see fit
         self.alpha = alpha
         self.dim = dim
 
@@ -31,19 +29,11 @@ class LogisticRegression:
         m,n = X.shape    
         teta=np.ones(n+1)
 
-        # rng = np.random.default_rng()
-        # for c in range (0,n+1):
-        #     teta[c] = rng.random()
-
         for i in range (m):
             xi=np.insert(X[i,:].copy(),0,1)
             hypi=sigmoid(np.matmul(np.transpose(teta),xi))
 
-            # teta 0
-            teta[0]+=self.alpha*(y[i]-hypi)
-
-            # teta 1 to n+1
-            for j in range (1,n+1):
+            for j in range (0,n+1):
                 teta[j]+=self.alpha*(y[i]-hypi)*xi[j]
 
         self.teta=teta
@@ -72,12 +62,10 @@ class LogisticRegression:
             output[i]=sigmoid(np.matmul(np.transpose(self.teta),xi))
         return output
 
-
     def build_add(self,X):
         """
-        Create data features by combining features, here: 
-            adding absolute values of x0 and x1
-        Note: should be called during .fit()
+        Create data features by combining features, here: adding absolute values of x0 and x1
+        Note: should be called during .fit() and .predict()
         
         Args:
             X (array<m,n>): a matrix of floats with 
@@ -85,7 +73,7 @@ class LogisticRegression:
             
         Returns:
             new_x (array<m,n+1>): a matrix of floats with 
-                m rows (#samples) and n+1 columns (#features
+                m rows (#samples) and n+1 columns (#features)
         """
         assert X.shape[1]>1
         return np.hstack((np.expand_dims(abs(X[:,0]+X[:,1]), axis=1),X.copy()))
@@ -102,7 +90,6 @@ class LogisticRegression:
             dim (integer): a vector of integers in the range [0, 5] 
                 containing m potential dimensions for the hypothesis function
         """
-
         # TODO: Implement 
         raise NotImplementedError()
 
