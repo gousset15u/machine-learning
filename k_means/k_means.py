@@ -1,20 +1,15 @@
-from inspect import ArgSpec
 import numpy as np 
 import pandas as pd 
-import random as rd
 # IMPORTANT: DO NOT USE ANY OTHER 3RD PARTY PACKAGES
 # (math, random, collections, functools, etc. are perfectly fine)
 
 
 class KMeans:
     
-    def __init__(self, cluster):
-        # NOTE: Feel free add any hyperparameters 
-        # (with defaults) as you see fit
+    def __init__(self, cluster, dim=1, eps=0.001):
         self.cluster = cluster
-        self.eps = 0.001
-        self.list_z=[]
-        self.list_centroid=[]
+        self.dim = dim
+        self.eps = eps
         
     def fit(self, X):
         """
@@ -24,25 +19,19 @@ class KMeans:
             X (array<m,n>): a matrix of floats with
                 m rows (#samples) and n columns (#features)
         """
-        # TODO: Implement
         m,n = X.shape
         centroids=np.empty([self.cluster,n])
 
         rng = np.random.default_rng()
-
         for c in range (0,self.cluster):
             centroids[c] = rng.random([n])
-        # if self.cluster==10:
-        #     centroids[0]=[0.9,1]
-        #     centroids[1]=[0.7,1]
-        #     centroids[2]=[0.7,3]
-        #     centroids[3]=[0.9,5]
-        #     centroids[4]=[0.6,7]
-        #     centroids[5]=[0.5,7]
-        #     centroids[6]=[0.8,10]
-        #     centroids[7]=[0.2,4]
-        #     centroids[8]=[0,1]
-        #     centroids[9]=[0.1,6]
+       
+        #next step: add clusters point at each iteration
+        if self.dim==2:
+            X=self.build_scale(X)
+            centroids[0]=[np.amax(X[:,0]),np.amax(X[:,1])]
+            centroids[1]=[np.amin(X[:,0]),np.amin(X[:,1])]
+
         self.centroids = centroids
     
     def predict(self, X):
@@ -61,43 +50,30 @@ class KMeans:
             there are 3 clusters, then a possible assignment
             could be: array([2, 0, 0, 1, 2, 1, 1, 0, 2, 2])
         """
+        if self.dim == 2:
+            X=self.build_scale(X)
+
         m,n=X.shape
         z=np.empty(m)
-        distor = 100
-        distor_prev = 0
-
-        list_z=[]
-        list_centroid=[]
-        compt = 0
-        
-        # x0 = np.stack((X[:,0],np.zeros(m)),axis=-1)
-        # x1 = np.stack((X[:,1],np.zeros(m)),axis=-1)
+        distor, distor_prev = 100, 0
+        old_centroids=[]
 
         while (distor > self.eps and distor_prev != distor):
-            compt+=1
             distor_prev = distor
             distor = euclidean_distortion(X,z.astype(int))
 
             for i in range (0,m):
                 dist_eucl = np.ones(self.cluster)
-                # dist_eucl_x0 = np.ones(self.cluster)
-                # dist_eucl_x1 = np.ones(self.cluster)
 
                 for j in range (0,self.cluster):
                     dist_eucl[j]=euclidean_distance(X[i,:],self.centroids[j])
-                    # dist_eucl_x0[j]=euclidean_distance(x0[i,:],self.centroids[j])
-                    # dist_eucl_x1[j]=euclidean_distance(x1[i,:],self.centroids[j])
                 # dist_eucl = euclidean_distance(X[i,:],self.centroids)
                 # dist_eucl = cross_euclidean_distance(X[i,:],self.centroids)
 
-                # if compt%3==0:
-                #     z[i] = np.argmin(dist_eucl)
-                # elif compt%2==1:
-                #     z[i] = np.argmin(dist_eucl_x0)
-                # else:
-                #     z[i] = np.argmin(dist_eucl_x1)
                 z[i] = np.argmin(dist_eucl)
-                #z[i] = argmin(X[i,:],self.centroids,self.cluster)
+
+                # check that width of cluster is less than medium width
+                # eucl_dist ( farest points ) / number of clusters ~ medium width 
 
             for j in range (0,self.cluster):
                 sum_coord =np.empty(n)
@@ -112,15 +88,12 @@ class KMeans:
                     self.centroids[j]=sum_coord/effectif
 
                 else: 
-                    print("zero")
-                    #TODO: find better method to delete a centroid
                     rng = np.random.default_rng()
                     self.centroids[j] = rng.random(n)
-            list_z.append(z)
-            list_centroid.append(self.centroids)
 
-        self.list_z=list_z
-        self.list_centroid=list_centroid
+            old_centroids.append(self.centroids)
+
+        self.old_centroids=old_centroids
 
         return z.astype(int)
     
@@ -139,13 +112,34 @@ class KMeans:
             [xm_1, xm_2, ..., xm_n]
         ])
         """
-        return self.centroids
+        if self.dim == 1:
+            return self.centroids
+        elif self.dim == 2:
+            c = self.centroids
+            return np.hstack((np.expand_dims(c[:,0].copy(),axis=1),np.expand_dims(c[:,1]/10, axis=1)))
 
     def get_list_centroids(self):
         return self.list_centroid
 
     def get_list_z(self):
         return self.list_z
+
+    def build_scale(self,X):
+        """
+        Create data features by combining features, here: scaling values of x0 and x1
+        Note: should be called during .predict()
+        
+        Args:
+            X (array<m,n>): a matrix of floats with 
+                m rows (#samples) and n columns (#features)
+            
+        Returns:
+            new_x (array<m,n+1>): a matrix of floats with 
+                m rows (#samples) and n columns (#features)
+        """
+        assert X.shape[1]>1
+        return np.hstack((np.expand_dims(X[:,0].copy(),axis=1),np.expand_dims(X[:,1]*10, axis=1)))
+
     
     
 # --- Some utility functions 
