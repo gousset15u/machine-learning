@@ -26,9 +26,14 @@ class LogisticRegression:
             y (array<m>): a numpy vector of floats containing 
                 m binary 0.0/1.0 labels
         """
-        X=self.build_dim(X)
+        if self.dim == 2:
+            X=self.build_add(X)
         m,n = X.shape    
         teta=np.ones(n+1)
+
+        # rng = np.random.default_rng()
+        # for c in range (0,n+1):
+        #     teta[c] = rng.random()
 
         for i in range (m):
             xi=np.insert(X[i,:].copy(),0,1)
@@ -42,48 +47,6 @@ class LogisticRegression:
                 teta[j]+=self.alpha*(y[i]-hypi)*xi[j]
 
         self.teta=teta
-
-    def fit_batch(self, X, y):
-        """
-        NOT USED - Estimates parameters for the classifier
-            with a batch gradient descent
-        
-        Args:
-            X (array<m,n>): a matrix of floats with
-                m rows (#samples) and n columns (#features)
-            y (array<m>): a vector of floats containing 
-                m binary 0.0/1.0 labels
-        """
-        m,n = X.shape
-        teta=np.ones(n+1)
-
-        for compt in range (200):
-            # switch with a check for convergence
-
-            # teta 0
-            sum0=0
-            for i in range (m-1):
-            #xi=np.insert(X.iloc[i,:].values,0,1)
-                xi=np.insert(X[i,:],0,1)
-                hypi=sigmoid(np.matmul(np.transpose(teta),xi))
-                sum0+=(y[i]-hypi)
-
-            teta[0]+=self.alpha*sum0
-
-            # teta 1 to n+1
-            for j in range (1,n+1):
-                
-                sumj=0
-                for i in range (m-1):
-                    xi=np.insert(X[i,:],0,1)
-                    hypi=sigmoid(np.matmul(np.transpose(teta),xi))
-                    sumj+=(y[i]-hypi)*X[i,j-1]
-
-                teta[j]+=self.alpha*sumj
-
-        self.teta=teta
-        print(f"teta after fit:\n{self.teta}\n")
-
     
     def predict(self, X):
         """
@@ -99,7 +62,8 @@ class LogisticRegression:
             A length m array of floats in the range [0, 1]
             with probability-like predictions
         """
-        X=self.build_dim(X)
+        if self.dim == 2:
+            X=self.build_add(X)
         m,n = X.shape
         output = np.zeros(m)
 
@@ -108,82 +72,23 @@ class LogisticRegression:
             output[i]=sigmoid(np.matmul(np.transpose(self.teta),xi))
         return output
 
-        
-    def build_dim(self,X):
+
+    def build_add(self,X):
         """
-        Create data features using different dimension
+        Create data features by combining features, here: 
+            adding absolute values of x0 and x1
         Note: should be called during .fit()
         
         Args:
             X (array<m,n>): a matrix of floats with 
-                m rows (#samples) and 2 columns (#features)
+                m rows (#samples) and n columns (#features)
             
         Returns:
-            A length m array of floats in the range [0, 1]
-            with probability-like predictions
+            new_x (array<m,n+1>): a matrix of floats with 
+                m rows (#samples) and n+1 columns (#features
         """
-        m,n = X.shape
-
-        if self.dim==1:
-            return X
-        
-        else:
-            sign_dim = int(math.copysign(1,self.dim))
-            x_dim = n*self.dim if sign_dim else n*(abs(self.dim)+1)
-            beg = 2 if sign_dim else -1
-            new_x = np.empty([m,x_dim])
-
-            for i in range (m):
-                xi = X[i,:].copy()
-
-                for d in range (beg,self.dim+sign_dim,sign_dim):
-                    xi_d=np.power(xi,d)
-                    xi = np.hstack((xi,xi_d))
-                new_x[i] = xi
-            
-            return new_x
-        
-    def build_dim_col(self,X):
-        """
-        Create data features using different dimension (construction by columns)
-        Note: should be called during .fit()
-        
-        Args:
-            X (array<m,n>): a matrix of floats with 
-                m rows (#samples) and 2 columns (#features)
-            
-        Returns:
-            A length m array of floats in the range [0, 1]
-            with probability-like predictions
-        """
-        m,n = X.shape
-
-        if self.dim==1:
-            return X
-        
-        elif self.dim==1:
-            sign_dim = int(math.copysign(1,self.dim))
-            x_dim = n*self.dim if sign_dim else n*(abs(self.dim)+1)
-            beg = 2 if sign_dim else -1
-            new_x = np.empty([m,x_dim])
-
-            for i in range (m):
-                xi = X[i,:].copy()
-
-                for d in range (beg,self.dim+sign_dim,sign_dim):
-                    xi_d=np.power(xi,d)
-                    xi = np.hstack((xi,xi_d))
-                new_x[i] = xi
-            
-            return new_x
-
-        else:
-            new_x = X.copy()
-
-            for d in range (beg,self.dim+sign_dim,sign_dim):
-                col_d=np.power(xi,d)
-                col_d=np.hstack((xi,xi_d))
-            new_x[i] = xi
+        assert X.shape[1]>1
+        return np.hstack((np.expand_dims(abs(X[:,0]+X[:,1]), axis=1),X.copy()))
 
     def grid_search(sel,alpha,dim):
         """
