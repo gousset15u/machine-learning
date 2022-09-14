@@ -6,10 +6,11 @@ import pandas as pd
 
 class KMeans:
     
-    def __init__(self, cluster, dim=1, scale=1):
+    def __init__(self, cluster, dim=1):
         self.cluster = cluster
         self.dim = dim
-        self.scale = scale
+        self.radius_min = 0.44
+        self.radius_max = 0.51
         
     def fit(self, X):
         """
@@ -22,6 +23,7 @@ class KMeans:
         m,n = X.shape
         centroids=np.empty([self.cluster,n])
 
+        #initalize centroids to random points
         rng = np.random.default_rng()
         for c in range (0,self.cluster):
             centroids[c] = rng.random([n])
@@ -43,25 +45,26 @@ class KMeans:
             there are 3 clusters, then a possible assignment
             could be: array([2, 0, 0, 1, 2, 1, 1, 0, 2, 2])
         """
-        
+
         X=self.build_scale(X)
         m,n=X.shape
         z=np.zeros(m)
-        distor, distor_prev = 100, 0
-        old_centroids=[]
+        self.old_centroids=[]
+        prev_z=np.ones(m)
 
-        while (distor > 0.001 and distor_prev != distor):
-            distor_prev = distor
-            distor = euclidean_distortion(X,z.astype(int))
+        while (not np.array_equal(z,prev_z)):
+            prev_z = z.copy()
 
+            #assign each point to the nearest centroid
             for i in range (0,m):
                 dist_eucl = np.ones(self.cluster)
 
                 for j in range (0,self.cluster):
-                    dist_eucl[j]=euclidean_distance(X[i,:],self.centroids[j])
+                    dist_eucl[j]=euclidean_distance(X[i,:],self.centroids[j]) 
 
                 z[i] = np.argmin(dist_eucl)
 
+            #update centroids to the average location of its assigned points
             for j in range (0,self.cluster):
                 sum_coord =np.empty(n)
                 for i in range(m):
@@ -78,28 +81,42 @@ class KMeans:
                     rng = np.random.default_rng()
                     self.centroids[j] = rng.random(n)
 
-            old_centroids.append(self.centroids)
-
-        self.old_centroids=old_centroids
+            #add centroids to record
+            self.old_centroids.append(self.centroids.copy())
 
         return z.astype(int)
-    
+
+    def check_radius(self,X,z,n):
+        #checks that radius isn't too big or too small
+        radius = self.cluster_radius(X,z)
+        too_big, too_small = [], []
+
+        for j in range (0,self.cluster):
+            if radius[j]>self.radius_max:
+                too_big.append(j)
+
+            elif radius[j]<self.radius_min:
+                too_small.append(j)
+        return too_big,too_small
+
+    def centroids_radius(self,list):
+        #change centroids btw too big radius and too small radius
+        #lol
+        return None
+
+
     def get_centroids(self):
         """
         Returns the centroids found by the K-mean algorithm
-        
-        Example with m centroids in an n-dimensional space:
-        >>> model.get_centroids()
-        numpy.array([
-            [x1_1, x1_2, ..., x1_n],
-            [x2_1, x2_2, ..., x2_n],
-                    .
-                    .
-                    .
-            [xm_1, xm_2, ..., xm_n]
-        ])
         """
         return np.hstack((np.expand_dims(self.centroids[:,0],axis=1),np.expand_dims(self.centroids[:,1]/self.scale, axis=1)))
+        
+    def get_init_centroids(self):
+        """
+        Returns the centroids randomly initialized by the K-mean algorithm
+        """
+        return np.hstack((np.expand_dims(self.old_centroids[0][:,0],axis=1),np.expand_dims(self.old_centroids[0][:,1]/self.scale, axis=1)))
+
 
     def build_scale(self,X):
         """
@@ -115,9 +132,54 @@ class KMeans:
                 m rows (#samples) and n columns (#features)
         """
         assert X.shape[1]>1
+        self.scale = (np.amax(X[:,0])-np.amin(X[:,0]))/(np.amax(X[:,1])-np.amin(X[:,1]))
         return np.hstack((np.expand_dims(X[:,0].copy(),axis=1),np.expand_dims(X[:,1]*self.scale, axis=1)))
 
-    
+    def cluster_radius(self,X,z):
+        """
+        Computes the cluster radius
+        
+        Args:
+            X (array<m,n>): a matrix of floats with 
+                m rows (#samples) and n columns (#features)
+
+            z (array<m>): an array of integer with cluster assignments
+                for each point. 
+            
+        Returns: 
+            mean_radius (array<m>): an array of floats with the mean 
+                radius of every cluster, i.e the distance between each points and it's cluster centroid
+        """
+        m,n = X.shape
+        C = self.get_centroids()
+        z=z.astype(int)
+
+        sum_radius = np.zeros(self.cluster)
+        mean_radius = np.ones(self.cluster)
+        effectif = np.zeros(self.cluster)
+
+        for i in range (0,m-1):
+            sum_radius[z[i]]+=euclidean_distance(X[i],C[z[i]])
+            effectif[z[i]]+=1
+
+        for k in range (self.cluster):
+            if effectif[k]!=0:
+                mean_radius[k]=sum_radius[k]/effectif[k]
+            else:
+                mean_radius[k]=0
+
+        return mean_radius
+        
+def cluster_quality(cluster):
+    if len(cluster) == 0:
+        return 0.0
+
+    quality = 0.0
+    for i in range(len(cluster)):
+        for j in range(i, len(cluster)):
+            quality += euclidean_distance(cluster[i], cluster[j])
+    return quality / len(cluster)
+
     
 # --- Some utility functions 
 

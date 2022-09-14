@@ -1,3 +1,4 @@
+from statistics import mode
 import numpy as np 
 import pandas as pd 
 import matplotlib.pyplot as plt 
@@ -44,13 +45,14 @@ sns.scatterplot(x='x0', y='x1', data=data_2);
 
 # Fit Model 
 X = data_2[['x0', 'x1']].to_numpy()
-model_2 = km.KMeans(10,2,10)  # <-- Feel free to add hyperparameters 
+model_2 = km.KMeans(10,2)  # <-- Feel free to add hyperparameters 
 model_2.fit(X)
 
 # Compute Silhouette Score 
 z = model_2.predict(X)
 print(f'Distortion: {km.euclidean_distortion(X, z) :.3f}')
 print(f'Silhouette Score: {km.euclidean_silhouette(X, z) :.3f}')
+print(f'Mean radius: {model_2.cluster_radius(X, z)}')
 
 # Plot cluster assignments
 C = model_2.get_centroids()
