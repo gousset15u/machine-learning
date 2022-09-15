@@ -1,7 +1,4 @@
-from re import M
 import numpy as np 
-import pandas as pd 
-import math
 # IMPORTANT: DO NOT USE ANY OTHER 3RD PARTY PACKAGES
 # (math, random, collections, functools, etc. are perfectly fine)
 
@@ -41,7 +38,6 @@ class LogisticRegression:
     def predict(self, X):
         """
         Generates predictions
-        
         Note: should be called after .fit()
         
         Args:
